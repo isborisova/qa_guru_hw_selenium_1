@@ -25,7 +25,7 @@ def driver():
 
     driver = webdriver.Chrome()
     driver.maximize_window()
-    driver.implicitly_wait(5)
+    driver.implicitly_wait(5) # неявное ожидание, вроде не оч, но переписывать много
 
     yield driver
 
@@ -50,6 +50,7 @@ def driver():
         ("qaguru@", "qaguru", "negative", "Введен некорректный Email"),
         ("@qa.guru", "qaguru", "negative", "Введен некорректный Email"),
         ("qaguru' OR '1'='1", "' OR '1'='1", "negative", "Некорректные данные"),
+        ("borisova_i@qa.guru", "qaguru", "negative", "Такого пользователя не существует"),
     ]
 )
 def test_login_form(driver, email, password, scenario_type, expected_text):
@@ -76,7 +77,7 @@ def test_login_form(driver, email, password, scenario_type, expected_text):
     # 5. Ожидание появления ответа
     actual_result = driver.find_element(*STATUS_MESSAGE).text
 
-    time.sleep(5)
+    # time.sleep(5) - и без неё работает нормально
 
     # NOTE: как минимум по трем причинам это анти подход 
     # 5. Ожидание появления ответа (алерта или текста на экране)

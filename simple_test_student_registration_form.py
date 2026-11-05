@@ -5,6 +5,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support import expected_conditions as EC
 
 # python -m unittest simple_test_student_registration_form.py
@@ -21,7 +22,12 @@ class TestAutomationForm(unittest.TestCase):
 
         self.driver = webdriver.Chrome()
         self.driver.maximize_window()
-        self.wait = WebDriverWait(self.driver, 5)  # Явное ожидание до 5 секунд
+        self.wait = WebDriverWait(
+            self.driver,
+            timeout=5,
+            poll_frequency=0.5,
+            ignored_exceptions=[NoSuchElementException]
+        ) # говорят что для React такое ожидание лучше, особенно для календаря
         self.url = "https://qa-guru.github.io/one-page-form/automation-practice-form.html"
 
     def test_fill_entire_form(self):
@@ -34,7 +40,7 @@ class TestAutomationForm(unittest.TestCase):
         form_title = self.wait.until(EC.visibility_of_element_located((By.XPATH, "/html/body/main/section/h1")))
         self.assertEqual(form_title.text, "Practice Form")
 
-        time.sleep(5)
+        # time.sleep(5) - для просмотра результата можно раскомментировать
 
         form_sub_title = self.wait.until(EC.visibility_of_element_located((By.XPATH, "/html/body/main/section/div/p")))
         self.assertEqual(form_sub_title.text, "Student Registration Form")
@@ -65,11 +71,11 @@ class TestAutomationForm(unittest.TestCase):
         gender_male_label.click()
 
         # 5. Текстовое поле: Номер телефона (Mobile)
-        mobile_number = driver.find_element(By.ID, "userNumber")
+        mobile_number = self.wait.until(EC.visibility_of_element_located((By.ID, "userNumber")))
         mobile_number.send_keys("9991234567")
 
         # 6. Виджет календаря (Date of Birth)
-        date_input = driver.find_element(By.ID, "dateOfBirthInput")
+        date_input = self.wait.until(EC.visibility_of_element_located((By.ID, "dateOfBirthInput")))
         date_input.click()
 
         # Ожидаем появление всплывающего окна календаря
@@ -110,7 +116,7 @@ class TestAutomationForm(unittest.TestCase):
         with open(temp_file_path, "w") as f:
             f.write("fake image data")
 
-        upload_input = driver.find_element(By.ID, "uploadPicture")
+        upload_input = self.wait.until(EC.visibility_of_element_located((By.ID, "uploadPicture")))
         upload_input.send_keys(temp_file_path)
 
         # 10. Текстовая область: Текущий адрес (Current Address)
@@ -147,7 +153,7 @@ class TestAutomationForm(unittest.TestCase):
         )
         self.assertEqual(modal_title.text, "Thanks for submitting the form")
 
-        time.sleep(5)
+        # time.sleep(5)
 
         # Проверяем наличие валидных данных в таблице результатов
         result_table = driver.find_element(By.CLASS_NAME, "table-responsive")
