@@ -2,6 +2,7 @@ import pytest
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support import expected_conditions as ec
 
 class TestTextBox:
@@ -23,42 +24,51 @@ class TestTextBox:
         self.driver = webdriver.Chrome()
         self.driver.get(self.URL)
         self.driver.maximize_window()
-        self.wait = WebDriverWait(self.driver, 5)
+        self.wait = WebDriverWait(
+            self.driver,
+            timeout=5,
+            poll_frequency=0.5,
+            ignored_exceptions=[NoSuchElementException]
+        )
         yield
         self.driver.quit()
 
     def full_name_field(self, full_name):
-        self.driver.find_element(*self.FULL_NAME_FIELD).send_keys(full_name)
+        element = self.wait.until(ec.visibility_of_element_located(self.FULL_NAME_FIELD))
+        element.clear() # На всякий случай очищаем
+        element.send_keys(full_name)
 
     def email_field(self, email):
-        self.driver.find_element(*self.EMAIL_FIELD).send_keys(email)
+        element = self.wait.until(ec.visibility_of_element_located(self.EMAIL_FIELD))
+        element.clear()
+        element.send_keys(email)
 
     def current_address_field(self, current_address):
-        self.driver.find_element(*self.CURRENT_ADDRESS_FIELD).send_keys(current_address)
+        element = self.wait.until(ec.visibility_of_element_located(self.CURRENT_ADDRESS_FIELD))
+        element.clear()
+        element.send_keys(current_address)
 
     def permanent_address_field(self, permanent_address):
-            self.driver.find_element(*self.PERMANENT_ADDRESS_FIELD).send_keys(permanent_address)
+        element = self.wait.until(ec.visibility_of_element_located(self.PERMANENT_ADDRESS_FIELD))
+        element.clear()
+        element.send_keys(permanent_address)
 
-    # Здесь у меня маленький экран и нужна прокрутка, пришлось спрашивать у DeepSeek
+    # Здесь с прокруточкой и сразу же кликом
     def submit_button(self):
-        submit_button = self.driver.find_element(*self.SUBMIT_BUTTON)
-        self.driver.execute_script("arguments[0].scrollIntoView();", submit_button)
-        submit_button.click()
-
-    def result_box(self):
-        return self.driver.find_element(*self.RESULT_BOX)
+        submit_button = self.wait.until(ec.element_to_be_clickable(self.SUBMIT_BUTTON))
+        self.driver.execute_script("arguments[0].scrollIntoView(true); arguments[0].click();", submit_button)
 
     def result_box_name(self):
-        return self.driver.find_element(*self.RESULT_NAME).text
+        return self.wait.until(ec.visibility_of_element_located(self.RESULT_NAME)).text
 
     def result_box_email(self):
-        return self.driver.find_element(*self.RESULT_EMAIL).text
+        return self.wait.until(ec.visibility_of_element_located(self.RESULT_EMAIL)).text
 
     def result_current_address(self):
-        return self.driver.find_element(*self.RESULT_CURRENT_ADDRESS).text
+        return self.wait.until(ec.visibility_of_element_located(self.RESULT_CURRENT_ADDRESS)).text
 
     def result_permanent_address(self):
-        return self.driver.find_element(*self.RESULT_PERMANENT_ADDRESS).text
+        return self.wait.until(ec.visibility_of_element_located(self.RESULT_PERMANENT_ADDRESS)).text
 
 
     @pytest.mark.parametrize("current_address", [
@@ -89,11 +99,22 @@ class TestTextBox:
         print("Тест на проверку имени PASS")
 
     @pytest.mark.parametrize("email", [
-        "example@com", "ivanexample.com", ""
+        "ivanexample.com",
+        "example"
     ])
     def test_invalid_email(self, setup, email):
         self.email_field(email)
         self.submit_button()
-        result_box = self.driver.find_elements(*self.RESULT_BOX)
-        assert len(result_box) == 1
-        print("Блок результатов не показан при невалидном email")
+        try:
+            self.wait.until(ec.invisibility_of_element_located(self.RESULT_BOX))
+            print("Тест с пустым email PASS")
+        except:
+            assert False
+
+    def test_empty_email(self, setup):
+        self.full_name_field("Boba Boooba")
+        self.submit_button()
+        result_box = self.wait.until(ec.visibility_of_element_located(self.RESULT_BOX))
+        result_text = result_box.text
+        assert "Email:\n" in result_text
+        print("Тест с пустым email PASS")

@@ -1,7 +1,11 @@
 import pytest
+import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as ec
 
 
@@ -20,29 +24,48 @@ class TestLoginForm:
         self.driver = webdriver.Chrome()
         self.driver.get(self.URL)
         self.driver.maximize_window()
-        self.wait = WebDriverWait(self.driver, 5)
+        self.wait = WebDriverWait(
+            self.driver,
+            timeout=5,
+            poll_frequency=0.5,
+            ignored_exceptions=[NoSuchElementException]
+        )
         yield
         self.driver.quit()
 
+    # баловство, но я честно его скопипастила
     def field_login(self, login):
-        self.driver.find_element(*self.LOGIN_FIELD).send_keys(login)
+        element = self.wait.until(ec.visibility_of_element_located(self.LOGIN_FIELD))
+        actions = ActionChains(self.driver)
+        actions.click(element)
+        actions.key_down(Keys.CONTROL).send_keys("a").key_up(Keys.CONTROL)
+        actions.send_keys(Keys.BACKSPACE)
+        actions.send_keys(login)
+        actions.send_keys(Keys.TAB)
+        actions.perform()
 
     def field_password(self, password):
-        self.driver.find_element(*self.PASSWORD_FIELD).send_keys(password)
+        element = self.wait.until(ec.visibility_of_element_located(self.PASSWORD_FIELD))
+        actions = ActionChains(self.driver)
+        actions.click(element)
+        actions.key_down(Keys.CONTROL).send_keys("a").key_up(Keys.CONTROL)
+        actions.send_keys(Keys.BACKSPACE)
+        actions.send_keys(password)
+        actions.perform()
 
     def login_button(self):
-        self.driver.find_element(*self.LOGIN_BUTTON).click()
+        button = self.wait.until(ec.element_to_be_clickable(self.LOGIN_BUTTON))
+        button.click()
 
     def logout_button(self):
-        self.driver.find_element(*self.LOGOUT_BUTTON).click()
+        button = self.wait.until(ec.element_to_be_clickable(self.LOGOUT_BUTTON))
+        button.click()
 
     def welcome_message_text(self):
-        self.wait.until(ec.visibility_of_element_located(self.WELCOME_MESSAGE))
-        return self.driver.find_element(*self.WELCOME_MESSAGE).text
+        return self.wait.until(ec.visibility_of_element_located(self.WELCOME_MESSAGE)).text
 
     def error_message_text(self):
-        self.wait.until(ec.visibility_of_element_located(self.ERROR_MESSAGE))
-        return self.driver.find_element(*self.ERROR_MESSAGE).text
+        return self.wait.until(ec.visibility_of_element_located(self.ERROR_MESSAGE)).text
 
     @pytest.mark.parametrize("login, password, expected", [
         ("user1", "password1", f"Welcome, user1!")
